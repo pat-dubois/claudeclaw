@@ -15,6 +15,7 @@ const envConfig = readEnvFile([
   'DASHBOARD_PORT',
   'DASHBOARD_TOKEN',
   'DASHBOARD_URL',
+  'STORE_DIR',
 ]);
 
 // ── Multi-agent support ──────────────────────────────────────────────
@@ -68,7 +69,9 @@ const __dirname = path.dirname(__filename);
 // The SDK uses this as cwd, which causes Claude Code to load our CLAUDE.md
 // and all global skills from ~/.claude/skills/ via settingSources.
 export const PROJECT_ROOT = path.resolve(__dirname, '..');
-export const STORE_DIR = path.resolve(PROJECT_ROOT, 'store');
+export const STORE_DIR = envConfig.STORE_DIR
+  ? path.resolve(envConfig.STORE_DIR)
+  : path.resolve(PROJECT_ROOT, 'store');
 
 // Telegram limits
 export const MAX_MESSAGE_LENGTH = 4096;
