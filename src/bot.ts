@@ -15,7 +15,7 @@ import {
   agentSystemPrompt,
   TYPING_REFRESH_MS,
 } from './config.js';
-import { clearSession, getRecentConversation, getRecentMemories, getSession, setSession, lookupWaChatId, saveWaMessageMap, saveTokenUsage } from './db.js';
+import { clearSession, getRecentConversation, getRecentMemories, getSession, setSession, lookupWaChatId, saveWaMessageMap, saveTokenUsage, saveMemory } from './db.js';
 import { logger } from './logger.js';
 import { downloadMedia, buildPhotoMessage, buildDocumentMessage, buildVideoMessage } from './media.js';
 import { buildMemoryContext, saveConversationTurn } from './memory.js';
@@ -505,6 +505,7 @@ export function createBot(): Bot {
     { command: 'wa', description: 'Recent WhatsApp messages' },
     { command: 'slack', description: 'Recent Slack messages' },
     { command: 'dashboard', description: 'Open web dashboard' },
+    { command: 'checkpoint', description: 'Save session summary to memory' },
     { command: 'stop', description: 'Stop current processing' },
   ]).catch((err) => logger.warn({ err }, 'Failed to register bot commands with Telegram'));
 
@@ -522,6 +523,7 @@ export function createBot(): Bot {
       '/wa — WhatsApp messages\n' +
       '/slack — Slack messages\n' +
       '/dashboard — Web dashboard\n' +
+      '/checkpoint — Save session checkpoint\n' +
       '/stop — Stop current processing\n\n' +
       'You can also send voice notes, photos, files, and videos.'
     );
@@ -748,8 +750,74 @@ export function createBot(): Bot {
     }
   });
 
+  // /checkpoint — save session summary as high-salience memory + journal entry
+  bot.command('checkpoint', async (ctx) => {
+    if (!isAuthorised(ctx.chat!.id)) return;
+    const chatIdStr = ctx.chat!.id.toString();
+    const sessionId = getSession(chatIdStr, AGENT_ID);
+
+    if (!sessionId) {
+      await ctx.reply('No active session to checkpoint.');
+      return;
+    }
+
+    await sendTyping(ctx.api, ctx.chat!.id);
+
+    const checkpointPrompt = [
+      '[SYSTEM] Run a checkpoint. Do ALL of the following:',
+      '1. Write a 3-5 bullet summary of this session (what was discussed, decided, accomplished)',
+      '2. Append a journal entry to ~/.claude/journal/ using today\'s date — use the format:',
+      '   ## HH:MM | telegram | Brief title',
+      '   **What happened:** 2-3 sentences',
+      '   **Next:** one-liner',
+      '3. If /Users/Shared/tilli-os/HANDOFF.md exists, update "Current State" and "Next Step"',
+      '4. Output ONLY the bullet summary as your final response (no preamble)',
+    ].join('\n');
+
+    try {
+      const abortCtrl = new AbortController();
+      setActiveAbort(chatIdStr, abortCtrl);
+
+      const result = await runAgent(
+        checkpointPrompt,
+        sessionId,
+        () => void sendTyping(ctx.api, ctx.chat!.id),
+        undefined,
+        chatModelOverride.get(chatIdStr) ?? agentDefaultModel,
+        abortCtrl,
+      );
+
+      setActiveAbort(chatIdStr, null);
+
+      if (result.aborted) {
+        await ctx.reply('Checkpoint aborted.');
+        return;
+      }
+
+      if (result.newSessionId) {
+        setSession(chatIdStr, result.newSessionId, AGENT_ID);
+      }
+
+      const summary = result.text?.trim();
+      if (!summary) {
+        await ctx.reply('Checkpoint failed — no summary generated. Try again.');
+        return;
+      }
+
+      // Save to memories with high salience (survives decay + /newchat)
+      saveMemory(chatIdStr, `[Checkpoint] ${summary}`, 'semantic', 'checkpoint', 5.0);
+
+      await ctx.reply(`Checkpoint saved. Safe to /newchat.\n\n${summary}`);
+      logger.info({ chatId: ctx.chat!.id }, 'Checkpoint saved');
+    } catch (err) {
+      setActiveAbort(chatIdStr, null);
+      logger.error({ err }, 'Checkpoint failed');
+      await ctx.reply('Checkpoint failed. Try again.');
+    }
+  });
+
   // Text messages — and any slash commands not owned by this bot (skills, e.g. /todo /gmail)
-  const OWN_COMMANDS = new Set(['/start', '/help', '/newchat', '/respin', '/voice', '/model', '/memory', '/forget', '/chatid', '/wa', '/slack', '/dashboard', '/stop']);
+  const OWN_COMMANDS = new Set(['/start', '/help', '/newchat', '/respin', '/voice', '/model', '/memory', '/forget', '/chatid', '/wa', '/slack', '/dashboard', '/checkpoint', '/stop']);
   bot.on('message:text', async (ctx) => {
     const text = ctx.message.text;
     const chatIdStr = ctx.chat!.id.toString();

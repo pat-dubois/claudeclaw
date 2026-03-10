@@ -145,22 +145,5 @@ Turns: N | Compactions: N | Cost: $X.XX
 ```
 Keep it short.
 
-### `checkpoint`
-When Pat says "checkpoint", save a TLDR of the current conversation to SQLite so it survives a /newchat session reset. Steps:
-1. Write a tight 3-5 bullet summary of the key things discussed/decided in this session
-2. Find the DB path: `/Users/Shared/tilli-os/store/claudeclaw.db`
-3. Get the actual chat_id from: `sqlite3 /Users/Shared/tilli-os/store/claudeclaw.db "SELECT chat_id FROM sessions LIMIT 1;"`
-4. Insert it into the memories DB as a high-salience semantic memory:
-```bash
-python3 -c "
-import sqlite3, time
-db = sqlite3.connect('/Users/Shared/tilli-os/store/claudeclaw.db')
-now = int(time.time())
-summary = '''[SUMMARY OF CURRENT SESSION HERE]'''
-db.execute('INSERT INTO memories (chat_id, content, sector, salience, created_at, accessed_at) VALUES (?, ?, ?, ?, ?, ?)',
-  ('[CHAT_ID]', summary, 'semantic', 5.0, now, now))
-db.commit()
-print('Checkpoint saved.')
-"
-```
-5. Confirm: "Checkpoint saved. Safe to /newchat."
+### `/checkpoint`
+Now a real Telegram slash command (registered in bot.ts). Saves a session summary to memory with high salience, appends a journal entry, and updates HANDOFF.md. No need for manual instructions here — the handler does everything.

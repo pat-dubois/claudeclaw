@@ -244,12 +244,13 @@ export function saveMemory(
   content: string,
   sector = 'semantic',
   topicKey?: string,
+  salience = 1.0,
 ): void {
   const now = Math.floor(Date.now() / 1000);
   db.prepare(
-    `INSERT INTO memories (chat_id, content, sector, topic_key, created_at, accessed_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(chatId, content, sector, topicKey ?? null, now, now);
+    `INSERT INTO memories (chat_id, content, sector, topic_key, salience, created_at, accessed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(chatId, content, sector, topicKey ?? null, salience, now, now);
 }
 
 export function searchMemories(
