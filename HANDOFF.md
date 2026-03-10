@@ -1,32 +1,37 @@
 # ClaudeClaw - Session Handoff
 
 ## Last Session
-**Date:** 2026-03-10 09:44
+**Date:** 2026-03-10 11:00
 **Location:** /Users/Shared/tilli-os/claudeclaw
 
 ## Current State
-Bot is running via launchd (`com.claudeclaw.app`). Phases 1-4 fully complete, Phase 8 (Scheduled Tasks) now operational. Morning briefing task running weekdays at 8 AM — tested successfully at 9:40 AM, result arrived clean in Telegram. Two bugs fixed in upstream code: schedule-cli arg parsing and removed noisy task announcement. Database is `tilli.db` accessed via `tillidb` CLI.
+Bot is running via launchd (`com.claudeclaw.app`). Phases 1-4, 8, 11, and 12 are complete (minus file sending test and TTS tuning). Cloudflare Access protects the dashboard at 71111.patdubois.com with one-time PIN auth. Memory signals tightened, salience decay differentiated, banner rebranded. Cloudflare API token stored globally for future automation.
+
+**KNOWN BUG:** Dashboard is not showing memories or data panels. Needs troubleshooting -- may be related to auth changes (Cf-Access header flow) or the memory/decay parameter changes. This is the first thing to fix next session.
 
 ## Completed This Session
-- [x] Phase 8: Created morning briefing scheduled task (ID: `18811248`, weekdays 8 AM)
-- [x] Phase 8: Tested schedule-cli list, pause, resume — all working
-- [x] Phase 8: Verified dashboard shows task with active pill, countdown, controls
-- [x] Phase 8: Ran live test at 9:40 AM — briefing arrived in Telegram with journal recap, weather, AI news
-- [x] Fixed bug: schedule-cli `--agent` flag parsing removed argv[0] when flag absent (upstream bug)
-- [x] Fixed: removed "Scheduled task running:" announcement from scheduler (noise before results)
-- [x] Updated install checklist Phase 8 items
+- [x] Phase 11.1: Cloudflare Access via API (app: Tilli Dashboard, email: spacepat34@gmail.com, 30-day sessions)
+- [x] Phase 11.2: docs/SECURITY.md documenting bypassPermissions model
+- [x] Phase 12.1: Flexoki rainbow TILLI banner (matches status line palette)
+- [x] Phase 12.2: notify.sh hardened (--max-time 10, HTTP status error reporting)
+- [x] Phase 12.4: Memory signals tightened (removed 'my', added 'i like'/'i hate', skip system msgs)
+- [x] Phase 12.5: Salience decay differentiated (semantic 0.99, episodic 0.98, threshold 0.05)
+- [x] Dashboard auth simplified (CF Access header OR token -- no token needed via tunnel)
+- [x] Cloudflare API token stored in ~/.claude/.env for future use
+- [x] Established naming: Telegram-facing agents = TilliOS agents
+- [x] Clarified 3-layer architecture: global skills -> TilliOS agents -> Claude Code subagents
 
 ## In Progress
-- [ ] Phase 5 (Additional Voice): deferred — Pat plans a local TTS project soon
-- [ ] Phase 6 (Bundled Skills): deferred — Gmail/Calendar will have enhancements; Slack TBD
-- [ ] Dashboard customization (Pat is excited about this)
-- [ ] Phase 11: Security — Cloudflare Access for dashboard (recommended next)
-- [ ] Phase 12: Quick wins — file sending test, banner, notify.sh review
+- [ ] Dashboard data panels not loading (BUG -- troubleshoot first next session)
+- [ ] File sending test via Telegram (just needs manual test)
+- [ ] TTS voice tuning — deferred (Pat plans local TTS project)
+- [ ] Phase 6: Gmail/Calendar/Slack integration (future heavier session)
+- [ ] Phase 9: Multi-agent team (TilliOS agents -- future tilli-os/ work)
 
 ## Next Step (CRITICAL)
-**Do this first:** Phase 8 is done. Next priorities are Phase 11 (Cloudflare Access for dashboard security) and Phase 12 quick wins (file sending test, banner customization). Phase 6 (Gmail/Calendar/Slack) is the next big integration push when Pat is ready for a heavier session.
+**Do this first:** Troubleshoot why the dashboard isn't showing memories/data. Check if it's an auth issue (CF Access header not passing chatId correctly), a query param issue (token was part of URL which also carried chatId), or a data issue from the decay/signal changes. Start by hitting the API endpoints directly: `curl -H "Cf-Access-Authenticated-User-Email: spacepat34@gmail.com" http://localhost:3141/api/memories?chatId=<CHAT_ID>` vs the old token method.
 
-Tomorrow morning: verify the 8 AM briefing fires and arrives clean (no announcement preamble).
+Then: file sending test (quick manual check via Telegram), and this folder is mostly done. Future system work moves to tilli-os/.
 
 ## Working Commands
 ```bash
@@ -39,31 +44,30 @@ npm run build && launchctl stop com.claudeclaw.app && launchctl start com.claude
 launchctl start com.cloudflare.claudeclaw-tunnel
 launchctl stop com.cloudflare.claudeclaw-tunnel
 
+# Cloudflare API (token in ~/.claude/.env)
+CF_TOKEN=$(grep CLOUDFLARE_API_TOKEN ~/.claude/.env | cut -d= -f2)
+curl -s -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/9ff731c7fd48ad6f260e04ea4ef8e848/access/apps" | python3 -m json.tool
+
 # Scheduled tasks
 node dist/schedule-cli.js list
 node dist/schedule-cli.js create "prompt" "cron"
-node dist/schedule-cli.js pause <id>
-node dist/schedule-cli.js resume <id>
-node dist/schedule-cli.js delete <id>
 
 # TilliDB
 /Users/Shared/tilli-os/bin/tillidb status
 /Users/Shared/tilli-os/bin/tillidb memory recent 5
 
-# Health check
-npm run status
+# Dashboard debug
+curl http://localhost:3141/api/memories?token=<TOKEN>&chatId=<CHAT_ID>
 
 # Logs
 tail -f /tmp/claudeclaw.log
 ```
 
 ## Notes for Future Self
-- Database is `tilli.db` (not claudeclaw.db) — use tillidb CLI, never hardcode DB paths
-- STORE_DIR: `/Users/Shared/tilli-os/store/` (not default)
-- NEVER use `npm start` directly, always use launchctl
-- Install checklist is a SYMLINK to vault
-- Dashboard URL: `https://71111.patdubois.com`
-- schedule-cli had upstream bug (fixed): `--agent` flag parsing removed argv[0] when absent — worth reporting to Mark
-- Scheduler announcement removed — tasks now deliver results silently
-- Pat wants future briefings routed to email or dedicated channel (not main DM)
-- Pat prefers CLIs over MCPs where possible
+- Dashboard bug is likely chatId-related: the old URL had `?token=X&chatId=Y`, new CF Access flow may not be passing chatId
+- Cloudflare API token is scoped to patdubois.com with Access, Tunnel, Workers, Pages, DNS, Zone Settings permissions
+- CF Account ID: 9ff731c7fd48ad6f260e04ea4ef8e848
+- Pat wants to do terminal design (TILLI branding) but won't derail current work
+- Pat's big vision: end-of-day agent that ties together conversations, Granola transcripts, voice dumps, logbook, calendar -- extracts ideas and surfaces patterns. This is tilli-os/ level work.
+- Pat prefers API automation over web UI walkthroughs
+- 95% of future system work happens in tilli-os/, not claudeclaw/
