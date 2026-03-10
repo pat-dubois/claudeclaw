@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-import { STORE_DIR } from './config.js';
+import { STORE_DIR, DB_NAME } from './config.js';
 
 let db: Database.Database;
 
@@ -148,7 +148,7 @@ function createSchema(database: Database.Database): void {
 
 export function initDatabase(): void {
   fs.mkdirSync(STORE_DIR, { recursive: true });
-  const dbPath = path.join(STORE_DIR, 'claudeclaw.db');
+  const dbPath = path.join(STORE_DIR, DB_NAME);
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   createSchema(db);

@@ -108,6 +108,43 @@ Let me know if you need any changes.
 - For heavy tasks only (code changes + builds, service restarts, multi-step system ops, long scrapes, multi-file operations): send proactive mid-task updates via Telegram so Pat isn't left waiting in the dark. Use the notify script at `/Users/Shared/tilli-os/claudeclaw/scripts/notify.sh "status message"` at key checkpoints. Example: "Building... ⚙️", "Build done, restarting... 🔄", "Done ✅"
 - Do NOT send notify updates for quick tasks: answering questions, reading emails, running a single skill, checking Obsidian. Use judgment — if it'll take more than ~30 seconds or involves multiple sequential steps, notify. Otherwise just do it.
 
+## Vault Integration
+
+You can READ the full Obsidian vault at `/Users/Shared/patdubois/`. For WRITES, you only write to `Inbox/`:
+
+```bash
+# Drop a note into vault inbox (the Vault Steward will file it)
+cat > "/Users/Shared/patdubois/Inbox/Note Title.md" << 'EOF'
+---
+type: note
+created: $(date +%Y-%m-%d)
+source: claudeclaw
+---
+
+Content here.
+EOF
+```
+
+After dropping something in Inbox/, log it:
+```bash
+tillidb hive log claudeclaw vault-drop "Dropped [Note Title] in vault Inbox"
+```
+
+The Vault Steward (separate agent at vault root) handles filing, formatting, and organization. See `/Users/Shared/tilli-os/docs/AGENT-ACCESS.md` for full access rules.
+
+## TilliDB
+
+The shared database lives at `/Users/Shared/tilli-os/store/tilli.db`. Use the `tillidb` CLI for cross-agent operations:
+
+```bash
+tillidb memory search "query"     # Search memories
+tillidb memory add "content"      # Save a memory
+tillidb hive log claudeclaw <action> "summary"  # Log to hive mind
+tillidb hive recent               # See recent agent activity
+```
+
+After meaningful work (not routine message handling), log to hive mind so other agents stay aware.
+
 ## Memory
 
 You maintain context between messages via Claude Code session resumption. You don't need to re-introduce yourself each time. If Pat references something from earlier in the conversation, you have that context.
@@ -116,10 +153,10 @@ You maintain context between messages via Claude Code session resumption. You do
 
 ### `convolife`
 When Pat says "convolife", check the remaining context window and report back. Steps:
-1. Get the current session ID: `sqlite3 /Users/Shared/tilli-os/store/claudeclaw.db "SELECT session_id FROM sessions LIMIT 1;"`
+1. Get the current session ID: `sqlite3 /Users/Shared/tilli-os/store/tilli.db "SELECT session_id FROM sessions LIMIT 1;"`
 2. Query the token_usage table for context size and session stats:
 ```bash
-sqlite3 /Users/Shared/tilli-os/store/claudeclaw.db "
+sqlite3 /Users/Shared/tilli-os/store/tilli.db "
   SELECT
     COUNT(*)                as turns,
     MAX(context_tokens)     as last_context,
@@ -131,7 +168,7 @@ sqlite3 /Users/Shared/tilli-os/store/claudeclaw.db "
 ```
 3. Also get the first turn's context_tokens as baseline (system prompt overhead):
 ```bash
-sqlite3 /Users/Shared/tilli-os/store/claudeclaw.db "
+sqlite3 /Users/Shared/tilli-os/store/tilli.db "
   SELECT context_tokens as baseline FROM token_usage
   WHERE session_id = '<SESSION_ID>'
   ORDER BY created_at ASC LIMIT 1;

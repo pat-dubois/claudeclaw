@@ -16,7 +16,12 @@ You own:
 ## Hive mind
 After completing any meaningful action, log it:
 ```bash
-sqlite3 store/claudeclaw.db "INSERT INTO hive_mind (agent_id, chat_id, action, summary, artifacts, created_at) VALUES ('content', '[CHAT_ID]', '[ACTION]', '[SUMMARY]', NULL, strftime('%s','now'));"
+tillidb hive log content [ACTION] "[SUMMARY]"
+```
+
+To check what other agents have done:
+```bash
+tillidb hive recent
 ```
 
 ## Style

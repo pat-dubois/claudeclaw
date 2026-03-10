@@ -45,7 +45,7 @@ tail -f /tmp/cloudflared-tunnel.log
 
 ## Notes for Future Self
 - STORE_DIR points to `/Users/Shared/tilli-os/store/` (not the default `store/` in claudeclaw)
-- Database is at `/Users/Shared/tilli-os/store/claudeclaw.db`
+- Database is at `/Users/Shared/tilli-os/store/tilli.db` (renamed from claudeclaw.db)
 - NEVER use `npm start` directly, always use launchctl
 - Install checklist is a SYMLINK to vault (`/Users/Shared/patdubois/TILLI OS/ClaudeClaw Install Checklist.md`)
 - Dashboard URL: `https://71111.patdubois.com` (71111 = "tilli" digital signature)

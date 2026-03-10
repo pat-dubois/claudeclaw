@@ -16,6 +16,7 @@ const envConfig = readEnvFile([
   'DASHBOARD_TOKEN',
   'DASHBOARD_URL',
   'STORE_DIR',
+  'DB_NAME',
 ]);
 
 // ── Multi-agent support ──────────────────────────────────────────────
@@ -72,6 +73,8 @@ export const PROJECT_ROOT = path.resolve(__dirname, '..');
 export const STORE_DIR = envConfig.STORE_DIR
   ? path.resolve(envConfig.STORE_DIR)
   : path.resolve(PROJECT_ROOT, 'store');
+
+export const DB_NAME = envConfig.DB_NAME || 'tilli.db';
 
 // Telegram limits
 export const MAX_MESSAGE_LENGTH = 4096;

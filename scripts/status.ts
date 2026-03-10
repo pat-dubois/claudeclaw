@@ -190,7 +190,7 @@ async function main() {
   }
 
   // Memory DB
-  const dbPath = path.join(PROJECT_ROOT, 'store', 'claudeclaw.db');
+  const dbPath = path.join(PROJECT_ROOT, 'store', 'tilli.db');
   if (fs.existsSync(dbPath)) {
     try {
       const db = new Database(dbPath, { readonly: true });
