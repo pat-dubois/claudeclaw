@@ -766,8 +766,8 @@ export function createBot(): Bot {
     const checkpointPrompt = [
       '[SYSTEM] Run a checkpoint. Do ALL of the following:',
       '1. Write a 3-5 bullet summary of this session (what was discussed, decided, accomplished)',
-      '2. Append a journal entry to ~/.claude/journal/ using today\'s date — use the format:',
-      '   ## HH:MM | telegram | Brief title',
+      '2. Append a journal entry to /Users/Shared/tilli-os/journal/ using today\'s date — use the format:',
+      '   ## HH:MM | telegram | Brief title (prefix breadcrumbs with [telegram])',
       '   **What happened:** 2-3 sentences',
       '   **Next:** one-liner',
       '3. If /Users/Shared/tilli-os/HANDOFF.md exists, update "Current State" and "Next Step"',
