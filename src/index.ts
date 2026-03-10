@@ -47,33 +47,25 @@ function showBanner(): void {
   }
 }
 
-function acquireLock(): boolean {
+function acquireLock(): void {
   fs.mkdirSync(STORE_DIR, { recursive: true });
-  let killedOld = false;
   try {
     if (fs.existsSync(PID_FILE)) {
       const old = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
       if (!isNaN(old) && old !== process.pid) {
         try {
-          process.kill(old, 'SIGTERM');
-          killedOld = true;
-          // Wait for old process to fully die (bot.stop() calls getUpdates to flush,
-          // which races with our bot.start() if we don't wait long enough)
-          const deadline = Date.now() + 5000;
-          while (Date.now() < deadline) {
-            try {
-              process.kill(old, 0); // throws if process is gone
-              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
-            } catch {
-              break; // process is dead
-            }
-          }
-        } catch { /* already dead */ }
+          process.kill(old, 0); // throws if process is gone
+          // Process is still alive — refuse to start
+          logger.error({ pid: old }, 'ClaudeClaw is already running. Use `npm run restart` to restart, or `npm run stop` first.');
+          process.exit(1);
+        } catch {
+          // Process is dead — stale PID file, clean up and proceed
+          logger.info({ stalePid: old }, 'Cleaned up stale PID file');
+        }
       }
     }
   } catch { /* ignore */ }
   fs.writeFileSync(PID_FILE, String(process.pid));
-  return killedOld;
 }
 
 function releaseLock(): void {
@@ -90,14 +82,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const killedOld = acquireLock();
-
-  if (killedOld) {
-    // Telegram's server keeps the old polling connection alive for a few seconds
-    // after the OS process dies. Wait for it to expire before we start polling.
-    logger.info('Waiting for old Telegram polling session to expire...');
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
-  }
+  acquireLock();
 
   initDatabase();
   logger.info('Database ready');
