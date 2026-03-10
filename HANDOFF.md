@@ -1,37 +1,39 @@
 # ClaudeClaw - Session Handoff
 
 ## Last Session
-**Date:** 2026-03-10 11:00
+**Date:** 2026-03-10 18:30
 **Location:** /Users/Shared/tilli-os/claudeclaw
 
 ## Current State
-Bot is running via launchd (`com.claudeclaw.app`). Phases 1-4, 8, 11, and 12 are complete (minus file sending test and TTS tuning). Cloudflare Access protects the dashboard at 71111.patdubois.com with one-time PIN auth. Memory signals tightened, salience decay differentiated, banner rebranded. Cloudflare API token stored globally for future automation.
+Bot is running via launchd (`com.claudeclaw.app`). All ClaudeClaw-scoped phases complete (1-4, 8, 11, 12). Dashboard fully working at 71111.patdubois.com with Cloudflare Access auth — all data panels loading correctly. File sending confirmed working via Telegram.
 
-**KNOWN BUG:** Dashboard is not showing memories or data panels. Needs troubleshooting -- may be related to auth changes (Cf-Access header flow) or the memory/decay parameter changes. This is the first thing to fix next session.
+ClaudeClaw engine repo is effectively **done**. Remaining checklist items (Phases 5, 6, 7, 9, 10) are system-level concerns moved to tilli-os/ scope.
 
 ## Completed This Session
-- [x] Phase 11.1: Cloudflare Access via API (app: Tilli Dashboard, email: spacepat34@gmail.com, 30-day sessions)
-- [x] Phase 11.2: docs/SECURITY.md documenting bypassPermissions model
-- [x] Phase 12.1: Flexoki rainbow TILLI banner (matches status line palette)
-- [x] Phase 12.2: notify.sh hardened (--max-time 10, HTTP status error reporting)
-- [x] Phase 12.4: Memory signals tightened (removed 'my', added 'i like'/'i hate', skip system msgs)
-- [x] Phase 12.5: Salience decay differentiated (semantic 0.99, episodic 0.98, threshold 0.05)
-- [x] Dashboard auth simplified (CF Access header OR token -- no token needed via tunnel)
-- [x] Cloudflare API token stored in ~/.claude/.env for future use
-- [x] Established naming: Telegram-facing agents = TilliOS agents
-- [x] Clarified 3-layer architecture: global skills -> TilliOS agents -> Claude Code subagents
+- [x] Fixed dashboard data bug: 7/8 API endpoints in dashboard.ts missing `|| ALLOWED_CHAT_ID` fallback — CF Access auth passed but chatId defaulted to empty string, all data queries returned nothing
+- [x] File sending confirmed working (Pat tested live via Telegram)
+- [x] Updated install checklist: fixed stale `claudeclaw.db` -> `tilli.db`, added note that Phases 5/6/7/9/10 moved to tilli-os/
+- [x] Updated HANDOFF.md, MEMORY.md to clear dashboard bug
+- [x] Reviewed full checklist and tilli-os landscape for transition planning
+
+## Previously Completed
+- [x] Phases 1-4: Core, Voice, Video, Dashboard
+- [x] Phase 8: Scheduled tasks (morning briefing weekdays 8 AM)
+- [x] Phase 11: Security hardening (Cloudflare Access, SECURITY.md)
+- [x] Phase 12: Customization & Polish (banner, memory signals, salience decay, notify.sh)
 
 ## In Progress
-- [ ] Dashboard data panels not loading (BUG -- troubleshoot first next session)
-- [ ] File sending test via Telegram (just needs manual test)
 - [ ] TTS voice tuning — deferred (Pat plans local TTS project)
-- [ ] Phase 6: Gmail/Calendar/Slack integration (future heavier session)
-- [ ] Phase 9: Multi-agent team (TilliOS agents -- future tilli-os/ work)
+
+## Moved to tilli-os/
+- Phase 5: Additional Voice Options
+- Phase 6: Gmail/Calendar/Slack integration
+- Phase 7: WhatsApp Bridge
+- Phase 9: Multi-Agent Team (agent wiring, Discord bridge)
+- Phase 10: Google Workspace CLI
 
 ## Next Step (CRITICAL)
-**Do this first:** Troubleshoot why the dashboard isn't showing memories/data. Check if it's an auth issue (CF Access header not passing chatId correctly), a query param issue (token was part of URL which also carried chatId), or a data issue from the decay/signal changes. Start by hitting the API endpoints directly: `curl -H "Cf-Access-Authenticated-User-Email: spacepat34@gmail.com" http://localhost:3141/api/memories?chatId=<CHAT_ID>` vs the old token method.
-
-Then: file sending test (quick manual check via Telegram), and this folder is mostly done. Future system work moves to tilli-os/.
+**ClaudeClaw is done.** Future work lives in `/Users/Shared/tilli-os/`. This repo only gets touched for bot code changes, dashboard updates, or new Telegram commands.
 
 ## Working Commands
 ```bash
@@ -44,30 +46,21 @@ npm run build && launchctl stop com.claudeclaw.app && launchctl start com.claude
 launchctl start com.cloudflare.claudeclaw-tunnel
 launchctl stop com.cloudflare.claudeclaw-tunnel
 
-# Cloudflare API (token in ~/.claude/.env)
-CF_TOKEN=$(grep CLOUDFLARE_API_TOKEN ~/.claude/.env | cut -d= -f2)
-curl -s -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/9ff731c7fd48ad6f260e04ea4ef8e848/access/apps" | python3 -m json.tool
-
 # Scheduled tasks
 node dist/schedule-cli.js list
 node dist/schedule-cli.js create "prompt" "cron"
 
 # TilliDB
-/Users/Shared/tilli-os/bin/tillidb status
-/Users/Shared/tilli-os/bin/tillidb memory recent 5
-
-# Dashboard debug
-curl http://localhost:3141/api/memories?token=<TOKEN>&chatId=<CHAT_ID>
+tillidb status
+tillidb memory recent 5
 
 # Logs
 tail -f /tmp/claudeclaw.log
 ```
 
 ## Notes for Future Self
-- Dashboard bug is likely chatId-related: the old URL had `?token=X&chatId=Y`, new CF Access flow may not be passing chatId
-- Cloudflare API token is scoped to patdubois.com with Access, Tunnel, Workers, Pages, DNS, Zone Settings permissions
-- CF Account ID: 9ff731c7fd48ad6f260e04ea4ef8e848
-- Pat wants to do terminal design (TILLI branding) but won't derail current work
-- Pat's big vision: end-of-day agent that ties together conversations, Granola transcripts, voice dumps, logbook, calendar -- extracts ideas and surfaces patterns. This is tilli-os/ level work.
+- Dashboard chatId fix: added `|| ALLOWED_CHAT_ID` to all 7 endpoints in dashboard.ts (was only on 1 of 8)
+- Pat's big vision: end-of-day agent that ties together conversations, Granola transcripts, voice dumps, logbook, calendar. This is tilli-os/ level work.
 - Pat prefers API automation over web UI walkthroughs
 - 95% of future system work happens in tilli-os/, not claudeclaw/
+- ClaudeClaw stays as the Telegram/Discord access point — gets touched for bot code, dashboard, commands
