@@ -298,10 +298,15 @@ export function touchMemory(id: number): void {
 
 export function decayMemories(): void {
   const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
+  // Semantic memories (preferences, identity) decay slower: ~1% daily (~460 days to deletion)
+  // Episodic memories decay faster: ~2% daily (~114 days to deletion)
   db.prepare(
-    'UPDATE memories SET salience = salience * 0.98 WHERE created_at < ?',
+    "UPDATE memories SET salience = salience * 0.99 WHERE sector = 'semantic' AND created_at < ?",
   ).run(oneDayAgo);
-  db.prepare('DELETE FROM memories WHERE salience < 0.1').run();
+  db.prepare(
+    "UPDATE memories SET salience = salience * 0.98 WHERE sector != 'semantic' AND created_at < ?",
+  ).run(oneDayAgo);
+  db.prepare('DELETE FROM memories WHERE salience < 0.05').run();
 }
 
 // ── Scheduled Tasks ──────────────────────────────────────────────────

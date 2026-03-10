@@ -41,7 +41,38 @@ function showBanner(): void {
   const bannerPath = path.join(PROJECT_ROOT, 'banner.txt');
   try {
     const banner = fs.readFileSync(bannerPath, 'utf-8');
-    console.log('\n' + banner);
+    // Apply Flexoki rainbow to TILLI block letters (matches status line palette)
+    // Each letter column gets its color: T=red, I=orange, L=yellow, L=green, I=cyan
+    const COLORS = [
+      '\x1b[38;2;209;77;65m',    // T - Flexoki Red
+      '\x1b[38;2;218;112;44m',   // I - Flexoki Orange
+      '\x1b[38;2;208;162;21m',   // L - Flexoki Yellow
+      '\x1b[38;2;135;154;57m',   // L - Flexoki Green
+      '\x1b[38;2;58;169;159m',   // I - Flexoki Cyan
+    ];
+    const RESET = '\x1b[0m';
+    // Column ranges for each letter in the ASCII art (character positions)
+    const LETTER_RANGES = [
+      [0, 9],    // T
+      [9, 12],   // I
+      [12, 20],  // L
+      [20, 28],  // L
+      [28, 31],  // I
+    ];
+    const colored = banner.split('\n').map(line => {
+      if (line.length < 10) return line; // skip short lines
+      let result = '';
+      for (let i = 0; i < line.length; i++) {
+        const letterIdx = LETTER_RANGES.findIndex(([start, end]) => i >= start && i < end);
+        if (letterIdx >= 0) {
+          result += COLORS[letterIdx] + line[i] + RESET;
+        } else {
+          result += line[i];
+        }
+      }
+      return result;
+    }).join('\n');
+    console.log('\n' + colored);
   } catch {
     console.log('\n  ClaudeClaw\n');
   }

@@ -10,7 +10,8 @@ import {
 } from './db.js';
 import { buildObsidianContext } from './obsidian.js';
 
-const SEMANTIC_SIGNALS = /\b(my|i am|i'm|i prefer|remember|always|never)\b/i;
+const SEMANTIC_SIGNALS = /\b(i am|i'm|i prefer|i like|i don't like|i hate|remember this|don't forget|always|never)\b/i;
+const SKIP_PREFIXES = ['[Voice transcribed]', 'Photo received', 'Document received'];
 
 /**
  * Build a compact memory context string to prepend to the user's message.
@@ -81,8 +82,9 @@ export function saveConversationTurn(
     console.error('Failed to log conversation turn:', err);
   }
 
-  // Skip short or command-like messages for memory extraction
+  // Skip short, command-like, or system-generated messages for memory extraction
   if (userMessage.length <= 20 || userMessage.startsWith('/')) return;
+  if (SKIP_PREFIXES.some(prefix => userMessage.startsWith(prefix))) return;
 
   try {
     if (SEMANTIC_SIGNALS.test(userMessage)) {

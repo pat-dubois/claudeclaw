@@ -55,13 +55,22 @@ export function startDashboard(botApi?: Api<RawApi>): void {
     return c.json({ error: 'Internal server error' }, 500);
   });
 
-  // Token auth middleware
+  // Auth middleware — accepts Cloudflare Access (tunnel) OR dashboard token (localhost)
   app.use('*', async (c, next) => {
-    const token = c.req.query('token');
-    if (!DASHBOARD_TOKEN || !token || token !== DASHBOARD_TOKEN) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    // Cloudflare Access sets this header after authentication at the edge.
+    // Traffic can only reach us through the tunnel, so this header can't be spoofed externally.
+    const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
+    if (cfEmail) {
+      await next();
+      return;
     }
-    await next();
+    // Fallback: token auth for direct localhost access
+    const token = c.req.query('token');
+    if (DASHBOARD_TOKEN && token && token === DASHBOARD_TOKEN) {
+      await next();
+      return;
+    }
+    return c.json({ error: 'Unauthorized' }, 401);
   });
 
   // Serve dashboard HTML

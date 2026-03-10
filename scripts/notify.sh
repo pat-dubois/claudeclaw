@@ -19,7 +19,13 @@ if [ -z "$TOKEN" ] || [ -z "$CHAT_ID" ]; then
   exit 1
 fi
 
-curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+  -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
   -d chat_id="${CHAT_ID}" \
   -d text="${1}" \
-  -d parse_mode="HTML" > /dev/null
+  -d parse_mode="HTML")
+
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "notify.sh: Telegram API returned HTTP $HTTP_CODE" >&2
+  exit 1
+fi
