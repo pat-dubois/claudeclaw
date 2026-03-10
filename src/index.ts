@@ -47,14 +47,16 @@ function showBanner(): void {
   }
 }
 
-function acquireLock(): void {
+function acquireLock(): boolean {
   fs.mkdirSync(STORE_DIR, { recursive: true });
+  let killedOld = false;
   try {
     if (fs.existsSync(PID_FILE)) {
       const old = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
       if (!isNaN(old) && old !== process.pid) {
         try {
           process.kill(old, 'SIGTERM');
+          killedOld = true;
           // Wait for old process to fully die (bot.stop() calls getUpdates to flush,
           // which races with our bot.start() if we don't wait long enough)
           const deadline = Date.now() + 5000;
@@ -71,6 +73,7 @@ function acquireLock(): void {
     }
   } catch { /* ignore */ }
   fs.writeFileSync(PID_FILE, String(process.pid));
+  return killedOld;
 }
 
 function releaseLock(): void {
@@ -87,7 +90,14 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  acquireLock();
+  const killedOld = acquireLock();
+
+  if (killedOld) {
+    // Telegram's server keeps the old polling connection alive for a few seconds
+    // after the OS process dies. Wait for it to expire before we start polling.
+    logger.info('Waiting for old Telegram polling session to expire...');
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+  }
 
   initDatabase();
   logger.info('Database ready');
