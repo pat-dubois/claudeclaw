@@ -55,7 +55,17 @@ function acquireLock(): void {
       if (!isNaN(old) && old !== process.pid) {
         try {
           process.kill(old, 'SIGTERM');
-          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+          // Wait for old process to fully die (bot.stop() calls getUpdates to flush,
+          // which races with our bot.start() if we don't wait long enough)
+          const deadline = Date.now() + 5000;
+          while (Date.now() < deadline) {
+            try {
+              process.kill(old, 0); // throws if process is gone
+              Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+            } catch {
+              break; // process is dead
+            }
+          }
         } catch { /* already dead */ }
       }
     }
