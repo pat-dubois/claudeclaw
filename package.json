@@ -8,8 +8,6 @@
     "dev": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "stop": "bash scripts/stop.sh",
-    "restart": "bash scripts/stop.sh && sleep 3 && node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

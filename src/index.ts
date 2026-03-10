@@ -54,14 +54,9 @@ function acquireLock(): void {
       const old = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
       if (!isNaN(old) && old !== process.pid) {
         try {
-          process.kill(old, 0); // throws if process is gone
-          // Process is still alive — refuse to start
-          logger.error({ pid: old }, 'ClaudeClaw is already running. Use `npm run restart` to restart, or `npm run stop` first.');
-          process.exit(1);
-        } catch {
-          // Process is dead — stale PID file, clean up and proceed
-          logger.info({ stalePid: old }, 'Cleaned up stale PID file');
-        }
+          process.kill(old, 'SIGTERM');
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+        } catch { /* already dead */ }
       }
     }
   } catch { /* ignore */ }
